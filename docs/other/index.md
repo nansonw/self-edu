@@ -46,3 +46,17 @@
 
 ## docsify 本地项目部署到github
 >https://segmentfault.com/a/1190000038320425
+
+## window10 本地仓库与远程仓库建立连接后报错 
+>本地仓库与远程仓库关联:https://www.liaoxuefeng.com/wiki/896043488029600/898732864121440
+
+>1 git@github.com: Permission denied (publickey). Could not read from remote repository 
+解决:https://blog.csdn.net/ywl470812087/article/details/104459288 
+
+>2 ssh-agent -s 管理员命令行报错"unable to start ssh-agent service, error :1058"
+解决: https://blog.csdn.net/weixin_45444133/article/details/103685858 一直到设置 openSSh为自动就可以后续操作
+
+>3 同一台电脑配置多个git账号（gitlee,github,gitlab...）
+参考:https://blog.csdn.net/qq_63445283/article/details/123340346
+参考:https://blog.csdn.net/DespairC/article/details/125148215
+
