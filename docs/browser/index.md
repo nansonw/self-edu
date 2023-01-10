@@ -108,9 +108,59 @@
         
     4.5 操作系统API绘制页面内容(GUI)
  ```
-  ## 浏览器运行原理,JS运行机制[下]
+  ## JS运行机制[下]
   ```
   1 进程和线程
-  
+    1.1 进程是现在进行时的概念,正在运行的程序.是资源分配的最小单位( cpu会给进程分配资源空间) 分配有资源空间的且正在运行的程序可以称之为进程.
+
+    1.2 线程是程序执行的最小单元.
+
+    1.3 程序是一般现在时(静态,陈述的概念),进程(现在进行时的概念).
+    小结:CPU > (程序) > 进程 > 线程
+
+    1.4 单进程/多进程(CPU中并行的进程):同一个计算机允许在同一时间运行的进程的数量描述."在写代码的同时可以听歌,这就是多进程"
+
+
+    1.5 单线程/多线程(进程中并行的线程):同一个进程中同时存在的执行流的个数,单/多是执行流的计量单位,只有一个执行流的称之为单线程,有多个执行流的称之为多线程.
+    一个进程是单线程的话,意味着执行是串联的,某个环节出错,进程就会崩溃.
+    一个进程是多线程的,执行流之间是互不干扰的,只要不是所有执行流都有问题,进程就不会崩溃.
+
+    1.6 单核/多核:这里的'核'在计算机中指的是核心,也就是CPU或者等效CPU的概念,单/多是计量单位,一个或者多个CPU核心.
+    
+  2 单线程的js
+    2.1 为什么js是单线程的:js可以操作DOM和CSSOM的特性决定了它只能是单线程的,为了避免多线程可能会造成的对同一个DOM或CSSOM的造成操作冲突,js就一定是单线程的.
+
+    2.2 js主线程和worker子线程.并没有改变js单线程的本质,worker子线程的上下文对象不能操作DOM,没有DOM BOM,但是有可以具有javascript的其它一些特性,可以充分利用计算机的计算能力而被设计出来的,子线程受主线程控制,主子线程的通讯是全双工的.默认情况下,主线程的同步的js代码会阻塞页面渲染(控制权由渲染引擎变更为js引擎),但是子线程的js代码只要没有和主线程有交互是不会阻塞页面渲染的.
+
+    2.3 主线程和子线程交互通讯api:onmessage(msg)[接收信息] postMessage[发送信息],它们之间的通讯是全双工的.(web worker使得js也有了后端的计算能力)
+     1) web workers 全双工参与者:主线程js && 子线程的js(负责计算).
+
+     2) web workers的分类:https://github.com/Pulset/Web-Worker
+        i) 普通worker: var cworker = new Worker(url); 掌握
+        ii) sharedWorker : var sworker = new SharedWorker(url);
+        iii) serviceWorker: 了解一下. navigator.serviceWorker.register(url).then() 可以缓存资源文件,提高页面性能
+      
+     3) web workers的创建与使用,url(js文件)必须是与主线程js是同源的. new Worker(url).global全局对象在主线程(window)和子线程(self)中有各自不同的指代访问.
+     4) 常用api,new Worker(url).onmessage/onmessageerror/postMessage/terminate(四个)
+
+
+    2.4 websocket: 
+    websocket:长连接,实时通讯.
+    webscoket 全双工参与者:js(主线程) && 后端接口.
+
+
+
+
+
+
+
+  3 浏览器的进程和线程
+
+  4  
+
   ```
-  
+ ### 附录:Web Workers 小结
+
+  ![logo](../detail/worker.jpg)  
+
+
