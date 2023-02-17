@@ -279,8 +279,10 @@
       3) async 放在普通函数声明前,声明该函数是异步的,会返回一个promise对象的resolve值（promise的成功回调）
          async = new Promise()。
       4) await 同步写法,异步操作,没有回调函数. await 后面默认只能处理promise对象的resovle值
-          /async函数（async函数的返回值是promise的resolve值),await == promise.then
-         await只能处理成功态的then,出现error时，要配合 try{}catch(err){}使用或者.catch回调进行处理
+          /async函数（async函数的返回值是promise的resolve值),await == promise.then (
+            如果await后面没有promise的resolve值，那么 await之后的代码（被看做是promise.then(xxxx)）不会被执行。
+          )
+         await只能处理成功态的then,出现error时，要配合 try{}catch(err){}使用或者 async函数的.catch回调进行处理
          try...catch == promise.catch
       5）解决回调地狱（回调函数的层层嵌套）的可行方案,promise.但是会出现异步回调较多的问题（一直then）;
          解决回调地狱（回调函数的层层嵌套）的最终方案, async/await
