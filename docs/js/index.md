@@ -100,9 +100,31 @@ console.log(a)
  ### 循环语句
  循环语句的构成要素：1 循环关键字 2 循环表达式 3 初始变量 4 自增变量 5 区块、循环体
  ```
+ 一 常规循环语句
+
   1)while 条件体
   2)do...while..
   3)for 条件体
+
+二 for循环的变形，易混淆的for循环
+
+2.1 for...in 循环 vs Object.keys()
+js中除了少数几个值以外，一切都是对象（字面量对象,字面量数组等都是）。for..in 和Object.keys在遍历对象时
+相同之处：都会返回对象的属性名。
+不同之处：for in 会返回对象自身的可枚举属性和继承的可枚举的属性名称,Object.keys遍历时只会返回对象自身的可枚举属性名称。
+小结1：for...in + hasOwnProperty === Object.keys
+
+2.2 for...of 循环 vs Object.values()
+相同之处：在成功遍历时都会返回对象属性值。
+ for...of 在遍历时只能可迭代对象[对象内部有iterator迭代器,包括数组,Set,Map和其它一些类数组对象]
+ 特别注意传统意义上的obj不可以被遍历,因为它们没有迭代器属性。for..of只会返回对象自身的可枚举属性值。
+ 使用let newObj = Object.values(commonObj); let newObj2 = Object.entries(commonObj)可以将普通对象转换成数组
+ （可迭代对象）
+
+ Object.values()在遍历对象时,不需要细分有无迭代器属性。它只会返回对象自身的可枚举属性对应的值。
+ Reflect.ownKeys()在遍历对象时,会遍历对象自有的属性，不再区分是否可枚举。展示更多的对象自有属性
+
+小结：Object系列api遍历时，更为严格，作用范围更精准，它只会遍历对象本身。
  ```
 
  ### break 与 continue的使用场景
@@ -829,7 +851,641 @@ myIntervalId.clear();
 浅拷贝只是为当前变量取了一个别名，在引用类型的值变动时改变是联动的。
 深拷贝是开辟了独立的空间存相同的值，在引用类型的值变动时改变是独立的。
 
+1.3 常见的浅拷贝方式
+ 1.3.1 "Object.assign" : let targetObj = Object.assgin({},sourceObj);
+ 1.3.2 对象展开运算符: let targetObj = {...sourceObj}
+
+1.4 常见的深拷贝方式
+ 1.4.1 let targetObj = JSON.parse(JSON.Stringify(sourceObj)) ;
+ 这种拷贝方式，局限性较大,会忽略sourceObj对象中属性值是undefined,Symbol,函数类型的属性拷贝,存在循环
+ 引用时还会报错。
+ 循环引用:"对象的属性间接或直接的引用了对象自身"
+ 1.4.2 完善后的自定义深拷贝。
+ --------------start-------------------
+const mapTag = '[object Map]';
+const setTag = '[object Set]';
+const arrayTag = '[object Array]';
+const objectTag = '[object Object]';
+const argsTag = '[object Arguments]';
+
+const boolTag = '[object Boolean]';
+const dateTag = '[object Date]';
+const numberTag = '[object Number]';
+const stringTag = '[object String]';
+const symbolTag = '[object Symbol]';
+const errorTag = '[object Error]';
+const regexpTag = '[object RegExp]';
+const funcTag = '[object Function]';
+
+const deepTag = [mapTag, setTag, arrayTag, objectTag, argsTag];
+
+
+function forEach(array, iteratee) {
+    let index = -1;
+    const length = array.length;
+    while (++index < length) {
+        iteratee(array[index], index);
+    }
+    return array;
+}
+
+function isObject(target) {
+    const type = typeof target;
+    return target !== null && (type === 'object' || type === 'function');
+}
+
+function getType(target) {
+    return Object.prototype.toString.call(target);
+}
+
+function getInit(target) {
+    const Ctor = target.constructor;
+    return new Ctor();
+}
+
+function cloneSymbol(targe) {
+    return Object(Symbol.prototype.valueOf.call(targe));
+}
+
+function cloneReg(targe) {
+    const reFlags = /\w*$/;
+    const result = new targe.constructor(targe.source, reFlags.exec(targe));
+    result.lastIndex = targe.lastIndex;
+    return result;
+}
+
+function cloneFunction(func) {
+    const bodyReg = /(?<={)(.|\n)+(?=})/m;
+    const paramReg = /(?<=\().+(?=\)\s+{)/;
+    const funcString = func.toString();
+    if (func.prototype) {
+        const param = paramReg.exec(funcString);
+        const body = bodyReg.exec(funcString);
+        if (body) {
+            if (param) {
+                const paramArr = param[0].split(',');
+                return new Function(...paramArr, body[0]);
+            } else {
+                return new Function(body[0]);
+            }
+        } else {
+            return null;
+        }
+    } else {
+        return eval(funcString);
+    }
+}
+
+function cloneOtherType(targe, type) {
+    const Ctor = targe.constructor;
+    switch (type) {
+        case boolTag:
+        case numberTag:
+        case stringTag:
+        case errorTag:
+        case dateTag:
+            return new Ctor(targe);
+        case regexpTag:
+            return cloneReg(targe);
+        case symbolTag:
+            return cloneSymbol(targe);
+        case funcTag:
+            return cloneFunction(targe);
+        default:
+            return null;
+    }
+}
+
+function clone(target, map = new WeakMap()) {
+
+    // 克隆原始类型
+    if (!isObject(target)) {
+        return target;
+    }
+
+    // 初始化
+    const type = getType(target);
+    let cloneTarget;
+    if (deepTag.includes(type)) {
+        cloneTarget = getInit(target, type);
+    } else {
+        return cloneOtherType(target, type);
+    }
+
+    // 防止循环引用
+    if (map.get(target)) {
+        return map.get(target);
+    }
+    map.set(target, cloneTarget);
+
+    // 克隆set
+    if (type === setTag) {
+        target.forEach(value => {
+            cloneTarget.add(clone(value, map));
+        });
+        return cloneTarget;
+    }
+
+    // 克隆map
+    if (type === mapTag) {
+        target.forEach((value, key) => {
+            cloneTarget.set(key, clone(value, map));
+        });
+        return cloneTarget;
+    }
+
+    // 克隆对象和数组
+    const keys = type === arrayTag ? undefined : Object.keys(target);
+    forEach(keys || target, (value, key) => {
+        if (keys) {
+            key = value;
+        }
+        cloneTarget[key] = clone(target[key], map);
+    });
+
+    return cloneTarget;
+}
+
+module.exports = {
+    clone
+};
+ ----------------end-----------------------
+1.4.3 lodash等第三方库的深拷贝。
+
 ```
+
+### 深入继承
+
+#### 一 原型链继承。双构造 + 原型链
+```
+【原型上定义的属性是被所有对象实例所共享的。
+核心做法是，两个构造中，修改其中一个构造的原型为另外一个构造的实例，这样改造后的构造就能使用
+另外一个构造里面的属性和原型链上的定义了。复用了另外一个构造的内容。】
+function Parent(){
+  this.name = 'test';//基本数据类型引用值
+  this.hobby= ['basketball','computer games'];//复合数据类型，引用地址
+}
+Parent.prototype.age = 22;
+Parent.prototype.greet = function(){
+ console.log(this.name,this.age)
+}
+ 
+//一个构造体想用另外一个构造的内容（构造体体内内容,构造体体外内容[构造体的原型链]）
+function Child(){
+ this.gender = 'male';
+}
+//每一个构造实例都具有其构造体内容和其构造的原型内容。
+//关联指定构造方法的“构造体+原型”的属性和方法
+Child.prototype = new Parent();//修改构造默认原型链为另一个构造实例,此实例默认有隐式
+//原型属性 __proto__ 指向Parent.prototype 即 Child.prototype === Parent.prototype + Parent构造体内容
+let child1 = new Child();
+child1.name += 'test1';
+child1.hobby.push('movie');//改动的是共享对象的属性。干扰后续对象
+
+let child2 = new Child();
+console.log(child1.name,child1.hobby,child2.name,child2.hobby);
+
+
+缺点：
+1 严格意义上这个是建立了构造之间的关联，提供了一种查找机制。并没有复用代码。
+对象原型实例的引用属性被后续的对象实例共享。
+
+2 下层构造不能像上层构造传递参数。
+```
+#### 二 复用继承。（复用指定构造体的方法）
+```
+纯实例属性的继承
+function Parent(name = 'parent'){
+  //this.name = 'parent';
+  this.name = name
+  this.hobbies  =['music','piano']
+  this.introduce = function(){
+    console.log("hello",this.name,"my hobby is",this.hobbies);
+  }
+}
+Parent.prototype.test = function(){
+  console.log(test);
+}
+function Child(){
+  Parent.call(this)//将Parent构造体的代码复用到Child,不需要再写一次。
+}
+
+function ChildNew(name){
+  Parent.call(this,name)
+}
+
+let child1 = new Child();
+child1.hobbies.push('football');//独立地改动的当前实例的引用属性
+console.log(child1.introduce());
+console.log(child1.test())
+
+let child2 = new Child();
+child2.hobbies.push('swimming');//独立地改动当前实例的引用属性
+console.log(child2.introduce());
+
+let child3 = new ChildNew('son');//下层构造向上层构造传递参数
+child3.hobbies.push('hiking');
+console.log(child3.introduce());
+
+优点 ：
+1 实例之间对各自属性的操作互不影响。
+2 下级构造可以向上级构造传递参数
+
+缺点
+1 由于借用构造继承是代码复用,对象的成员方法都在构造函数中定义，每次创建实例都会创建一遍方法。
+
+改进方向：构造体体内定义成员属性，构造体体外（原型）定义成员方法。
+```
+#### 三 组合继承（组合 原型链继承+借用继承 特点的继承）
+```
+function Parent(name){
+  this.name = name;
+  this.hobbies = ['music','movie','games'];
+}
+Parent.prototype.greet = function () {
+  console.log("hello",this.name,"my hobbies are as follows:",this.hobbies)
+}
+function Son(name,age){
+  //复用上层构造的构造体属性和方法,每个实例属性（构造体内）独立。不共享地址。
+  Parent.call(this,name);//第二程调用父构造
+  this.age = age;
+}
+//将当前构造与上层构造关联起来,关联上层构造的构造体和原型
+Son.prototype = new Parent();//第一调用父构造
+//修正构造体,解除构造体部分的关联，使用借用继承部分的代码复用上层构造体
+Son.prototype.constructor = Son;
+
+let comSon1 = new Son('小明',22);
+console.log(comSon1.greet())
+
+小结:常用的继承方式。复用实例属性,关联原型属性。继承的规范之一
+缺点：会调用两次父构造函数。
+```
+
+#### 四 原型式继承（类比原型链继承）
+```
+  区别与联系：原型式继承是以字面量对象实例为关联模板，原型链继承是以上层构造实例作为关联模板。原型式继承
+  只有实例属性，没有原型属性。
+
+ //单构造工厂模式 + 字面量对象做原型模板得到新对象并返回。
+ function createObj (templateObj){
+   function F(){}//下层构造
+   //建立下层构造与字面量对象的关联,只会关联实例属性。共享实例属性
+   F.prototype = templateObj;
+   return new F();//返回下层的构造实例。
+ } 
+ or 
+ function createObj(templateObj){
+  let newObj = Object.create(templateObj);
+  return newObj;
+ }
+ let person = {
+  name:'小吴',
+  hobbies:['sleeping','thinking','games']
+ }
+ let obj1 = createObj(person);
+ obj1.hobbies.push('joking');
+ console.log(obj1.hobbies);
+
+ let obj2 = createObj(person);
+ console.log(obj2.hobbies,obj1.hobbies === obj2.hobbies);//输出和obj1.hobbies一样，它们地址相同
+
+ 缺点：共享了字母量对象实例模板的属性地址,存在与原型链继承相同问题,对象实例之间不是独立的内存地址。
+```
+#### 五 寄生式继承:基于原型式继承的继承上，对对象进行增强处理。“以入参对象为构造原型的模板”
+```
+//工厂模式 + 字母量对象作为原型模板 +  增强实例
+function createObj(obj){
+  function F(){};
+  F.prototype = obj;
+  return new F();
+}
+function enhanceObj(obj){
+ let nwObj = createObj(obj);
+ nwObj.sayHi = function(){
+   console.log('hello,my name is',this.name)
+ }
+}
+or 
+function enhanceObj(obj){
+  //Object.create 指定对象原型的模板为入参对象
+  let nwObj = Object.create(obj);
+  retunr nwObj
+  
+}
+let person = {
+  name:'小吴',
+  hobbies:['swimming','singing','dancing']
+}
+
+let pq1 = enhanceObj(obj);
+```
+#### 最佳实践:六 寄生（原型式）组合继承
+工厂模式("指定新对象的原型模板对象") + 父子构造 + 实例属性和原型属性分开继承 
+
+```
+function createObj(obj){
+  let newObj = Object.create(obj);
+  return newObj;
+}
+or 
+function createObj(obj){
+  function F(){}
+  F.prototype = obj;
+  return new F();
+}
+
+
+function inherit(child,parent){
+  let supPrototype = createObj(parent.prototype);//指定原型模板,此时实例和原型属性都是直接上层的。
+  supPrototype.constructor = child;//指定实例属性获得机制,从下层构造中获取实例属性。
+  //new的时候调用的构造。
+  child.prototype = supPrototype;//指定原型属性获得机制,以原型关联上层原型属性。
+  //关联上级是什么。
+}
+function Parent(name){
+  this.name = name;
+  this.hobbies = ['music','photo','piano'] 
+}
+Parent.prototype.greet = function(){
+  console.log("i am",this.name,"my hobbies are as follows:",this.hobbies)
+}
+function Child(name,age){
+  Parent.call(this,name);
+  this.age = age;
+}
+ inherit(Child,Parent);
+
+ let child1 = new Child('小吴',25);
+ let child2 = new Child('小丁',27);
+
+```
+
+### 执行上下文和作用域链
+```
+一 可执行代码
+1.1 全局代码
+1.2 函数代码
+1.3 eval代码
+
+二 执行上下文: 可执行代码在执行前的所做准备的工作(如变量提升,函数声明提升).
+2.1 变量对象 VO [包括执行上下文中的变量和函数声明]。
+
+全局执行上下文：全局执行上下文的变量对象 === 全局变量。
+-----------------------
+函数执行上下文：函数执行上下文的变量对象 === 活动对象 === Arguments对象。
+-------------------------
+执行上下文（代码分析阶段和代码执行阶段）
+分析阶段:初始化变量对象。进入执行上下文时（分析）会给变量对象添加形参，函数声明，变量声明等初始的属性值
+执行阶段:修改变量对象。在代码执行阶段，会再次修改变量对象的属性值。
+
+2.2 作用域与作用域链 SC
+
+三 执行上下文栈: 多个可执行代码-》产生多个执行上下文-》管理多个执行上下文的一种机制
+```
+### 防抖和节流
+```
+1 防抖（debounce）: 事件在n秒内不再触发，那么该事件必将在n秒后执行。使用场景，表单和窗口大小调整时。
+减少事件的执行频率，n秒内不再触发，最后一次触发的在n秒后执行。
+debounce基础版：
+function debounce(event,timeGap)(
+  let timer = null;
+  return function(...args){
+    clearTimeout(timer);
+    timer = setTimeout(()=>{
+      event.apply(this,args)
+    },timeGap)
+  }
+)
+
+debounce 结合业务版（先执行一次，然后在n内不再触发，n秒后执行）
+function debounce(event,timeGap,flag){
+  let timer = null;
+  return function(...args){
+    clearTimeour(timer);
+    if(flag && !timer){
+      event.apply(this,args);
+    }
+    timer = settimeout(()=>{
+      event.apply(this,args);
+    },timeGap)
+  }
+}
+
+2 节流：忽略了事件触发频率，忽略两两触发时间间隔,会在给定时间后触发一次。
+在一定时间内只执行一次操作，无论有多少次操作触发。n秒内多次触发，只执行第一次。
+```
+
+### this绑定
+```
+总体来说,this有五种类型的绑定。
+1）默认绑定
+2）隐式绑定
+3）显式绑定
+4）new 绑定
+5）箭头函数绑定
+
+小结：this指向问题，谁调用指向谁。
+
+一 默认绑定
+在非严格模式下，this会指向全局对象Window,且所有在全局作用域下var声明的变量会成为Window对象的属性。
+严格模式下非全局作用域下的this会指向undefined。
+```
+#### 默认绑定实例
+```
+1.1 实例1  在全局作用域下，有且只有var声明的变量会成为Window对象的属性
+var a = 10;
+function foo () {
+  console.log(this.a)
+}
+foo(); // 10
+this指向符合 “谁调用指向谁”的设定。
+
+1.2 实例2 
+"use strict";
+var a = 10;
+function foo () {
+  console.log('this1', this)
+  console.log(window.a)
+  console.log(this.a)
+}
+console.log('this2', this) //Window
+foo();// this1 undefined ;10; Uncaught TypeError: Cannot read property 'a' of undefined
+
+1.3 实例3
+let a = 10
+const b = 20
+
+function foo () {
+  console.log(this.a)
+  console.log(this.b)
+}
+foo(); //undefined;undefined;
+console.log(window.a) //undefined
+
+1.4 实例4
+var a = 1
+function foo () {
+  var a = 2
+  console.log(this)
+  console.log(this.a)
+}
+
+foo() //Window;1
+
+1.5 实例5 
+
+var a = 1
+function foo () {
+  var a = 2
+  function inner () { 
+    console.log(this.a)
+  }
+  inner()
+}
+
+foo() //2
+```
+#### 隐式绑定实例
+```
+this 永远指向最后调用它的那个对象。谁（最后）调用就指向谁。
+
+2.1 实例1
+
+function foo () {
+  console.log(this.a)
+}
+var obj = { a: 1, foo }
+var a = 2
+obj.foo() //1
+
+2.2 实例2 隐式绑定的隐式丢失问题
+使用另一个变量来给函数取别名会发生隐式丢失
+
+function foo () {
+  console.log(this.a)
+};
+var obj = { a: 1, foo };
+var a = 2;
+var foo2 = obj.foo; //给函数取别名
+
+obj.foo();// 1
+foo2();//2 相当于window调用,this指向了window.
+
+2.3 实例3
+function foo () {
+  console.log(this.a)
+};
+var obj = { a: 1, foo };
+var a = 2;
+var foo2 = obj.foo; //函数取别名
+var obj2 = { a: 3, foo2: obj.foo }
+
+obj.foo(); //1
+foo2(); //2
+obj2.foo2(); //3
+
+2.4 实例4  把一个函数当成参数传递时，也会被隐式赋值
+
+function foo () {
+  console.log(this.a)
+}
+function doFoo (fn) {
+  console.log(this)
+  fn()
+}
+var obj = { a: 1, foo }
+var a = 2
+doFoo(obj.foo)//window调用。Window; 2;
+
+
+2.5 实例5 传入的回调函数在执行时,回调函数内部的this会隐式地绑定到window,
+与包裹着回调函数的函数体内的this无关。
+
+function foo () {
+  console.log(this.a)
+}
+function doFoo (fn) {
+  console.log(this)
+  fn() //没有明确谁调用，默认最后都是window调用
+}
+var obj = { a: 1, foo }
+var a = 2
+var obj2 = { a: 3, doFoo }
+
+obj2.doFoo(obj.foo) //{ a:3, doFoo: f } ;2
+
+```
+
+#### 显式绑定
+强行使用某个方法，改变this的默认指向 cba,使得this指向有实际意义的入参。
+
+```
+3.1 实例1 
+function foo () {
+  console.log(this.a)
+}
+var obj = { a: 1 }
+var a = 2
+
+foo()
+foo.call(obj)
+foo.apply(obj)
+foo.bind(obj)
+
+
+3.2 实例2 
+
+var obj1 = {
+  a: 1
+}
+var obj2 = {
+  a: 2,
+  foo1: function () {
+    console.log(this.a)
+  },
+  foo2: function () {
+    setTimeout(function () {//回调函数的隐式丢失问题,谁最后调用指向谁（window最后调用）
+      console.log(this)
+      console.log(this.a)
+    }, 0)
+  }
+}
+var a = 3
+
+obj2.foo1() //2
+obj2.foo2() // Window; 3;
+-----------
+vs
+----------
+var obj1 = {
+  a: 1
+}
+var obj2 = {
+  a: 2,
+  foo1: function () {
+    console.log(this.a)
+  },
+  foo2: function () {
+    setTimeout(function () {
+      console.log(this)
+      console.log(this.a)
+    }.call(obj1), 0)
+  }
+}
+var a = 3
+obj2.foo1() //2
+obj2.foo2() //obj1; 1
+
+```
+
+
+
+
+
+
+
+
 
 
 
