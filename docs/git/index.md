@@ -80,7 +80,39 @@ git 是一个分布式的版本控制系统;svn是集中式的版本控制系统
    git branch -a 查看分支
    git branch branchName 基于当前分支创建新分支。
    git branch -D branchName 强制删除分支。
-   git checkout branchName | git switch branchName 切换分支。 
-   git checkout -b branchName | git switch -c branchName 创建并切换分支。
+   git checkout branchName  | git switch branchName 切换分支。 
+   git checkout -b branchName origin/branchName | git switch -c branchName 创建并切换分支。
    git merge branchName 合并指定分支到当前分支。
+
+ 19 stash 操作：
+    git stash save '说明文字' //将尚未提交的修改临时保存起来，以便在稍后的时间点重新应用。
+    git stash list 查看快照列表的快照信息
+    git stash pop 应用并删除快照列表的第一个快照到当前分支
+    git stash pop stash@{n} 应用指定快照到当前分支，并删除快照列表的指定序号的快照,
+    这个序号从0开始计算
+    git stash apply 应用快照列表中的第一个快照到当前分支，不从快照列表中删除
+    git stash apply stash@{n} 应用快照列表指定序号的快照到当前分支，并且不将其从快照
+    列表中删除
+    git stash drop stash@{n} 删除快照列表中指定序号的快照
+
+ 20 git cherry-pick commit_id
+
+ 21 git rebase //rebase操作可以把本地未push的分叉提交历史整理成直线；
+
+ 22 标签操作
+    git tag tagName //在当前分支的最新提交上打个tag
+    git tag tagName commit_id //在当前分支的指定提交上打个tag
+    git tag //查看tag列表的所有tag
+
+    git tag -d tagName //删除本地分支的指定标签
+    git push origin tagName //将本地指定标签推送到远程
+    git push origin --tags //一次性将本地所有标签推送到远程
+
+    //需要删除远程tag需要做以下两个步骤的操作
+    本地删除：git tag -d tagName
+    远程删除：git push origin :refs/tags/tagName
+    
+
+
+
 ```
