@@ -1222,6 +1222,10 @@ function Child(name,age){
 ```
 
 ### 执行上下文和作用域链
+执行上下文[EC]的三个重要属性
+VO 变量对象
+SC 作用域链
+this 指向当前上下文的变量对象（VO/AO）
 ```
 一 可执行代码
 1.1 全局代码
@@ -1242,6 +1246,8 @@ function Child(name,age){
 2.2 作用域与作用域链 SC
 
 三 执行上下文栈: 多个可执行代码-》产生多个执行上下文-》管理多个执行上下文的一种机制
+
+2.3 this
 ```
 ### 防抖和节流
 ```
@@ -1431,7 +1437,7 @@ var a = 2
 foo()
 foo.call(obj)
 foo.apply(obj)
-foo.bind(obj)
+(foo.bind(obj))()
 
 
 3.2 实例2 
@@ -1477,7 +1483,577 @@ var a = 3
 obj2.foo1() //2
 obj2.foo2() //obj1; 1
 
+3.3 实例3
+var obj1 = {
+  a: 1
+}
+var obj2 = {
+  a: 2,
+  foo1: function () {
+    console.log(this.a)
+  },
+  foo2: function () {
+    function inner () {
+      console.log(this)
+      console.log(this.a)
+    }
+    inner()
+  }
+}
+var a = 3
+obj2.foo1() //2
+obj2.foo2() //Window;3
+
+3.4 实例4
+function foo () {
+  console.log(this.a)
+}
+var obj = { a: 1 }
+var a = 2
+
+foo() //2
+foo.call(obj) //1
+foo().call(obj) //2; Uncaught TypeError: Cannot read property 'call' of undefined
+
+3.5 实例5
+
+function foo () {
+  console.log(this.a)
+  return function () {
+    console.log(this.a)
+  }
+}
+var obj = { a: 1 }
+var a = 2
+
+foo() //2
+foo.call(obj) //1
+foo().call(obj) //2;1
+
+3.6 实例6
+function foo () {
+  console.log(this.a)
+  return function () {
+    console.log(this.a)
+  }
+}
+var obj = { a: 1 }
+var a = 2
+
+foo() //2
+foo.bind(obj)//只会改变函数内部的this指向,不会在改变指向的同时触发函数执行。
+foo().bind(obj)//2
+
+3.7 实例7
+function foo () {
+  console.log(this.a)
+  return function () {
+    console.log(this.a)
+  }
+}
+var obj = { a: 1 }
+var a = 2
+
+foo.call(obj)() //1; 2
+
+3.8 实例8
+var obj = {
+  a: 'obj',
+  foo: function () {
+    console.log('foo:', this.a)
+    return function () {
+      console.log('inner:', this.a)
+    }
+  }
+}
+var a = 'window'
+var obj2 = { a: 'obj2' }
+
+obj.foo()() //foo:obj; inner:window
+obj.foo.call(obj2)()//foo:obj2; inner:window
+obj.foo().call(obj2)//foo:obj; inner:obj2
+
+3.9 实例9
+var obj = {
+  a: 1,
+  foo: function (b) {
+    b = b || this.a
+    return function (c) {
+      console.log(this.a + b + c)
+    }
+  }
+}
+var a = 2
+var obj2 = { a: 3 }
+
+obj.foo(a).call(obj2, 1) //6
+obj.foo.call(obj2)(1) //6
+
+3.1.1 实例10
+function foo1 () {
+  console.log(this.a)
+}
+var a = 1
+var obj = {
+  a: 2
+}
+
+var foo2 = function () {
+  foo1.call(obj)
+}
+
+foo2() //2
+foo2.call(window)//2 改变的函数体内最外层的this的指向,同时触发函数立即执行,this "谁最后调用就指向谁"。
+
+3.1.2 实例11 
+function foo1 (b) {
+  console.log(`${this.a} + ${b}`)
+  return this.a + b
+}
+var a = 1
+var obj = {
+  a: 2
+}
+
+var foo2 = function () {
+  return foo1.call(obj, ...arguments)
+}
+
+var num = foo2(3) // 2 + 3
+console.log(num) //5
+
+3.1.3 实例12
+@callback 是回调函数
+@[,thisArgs] 是改变回调函数内部的直接this指向为 thisArg
+array.filter(callback(element[, index[, array]])[, thisArg]);
+
+function foo (item) {
+  console.log(item, this.a)
+}
+var obj = {
+  a: 'obj'
+}
+var a = 'window'
+var arr = [1, 2, 3]
+
+arr.filter(function (i) {
+  console.log(i, this.a)
+  return i > 2
+}, obj)
+
+//1 "obj"
+//2 "obj"
+//3 "obj"
+
+this 永远指向最后调用它的那个对象
+匿名函数的this永远指向window
+使用.call()或者.apply()的函数是会直接执行的
+bind()是创建一个新的函数，需要手动调用才会执行
+如果call、apply、bind接收到的第一个参数是空或者null、undefined的话，则会忽略这个参数
+forEach、map、filter 函数的第二个参数也是能显式绑定this
+
 ```
+#### new 绑定
+创建一个空对象，绑定构造函数内的this，完成构造函数内的操作,并默认返回这个对象。
+```
+4.1 实例1
+function Person (name) {
+  this.name = name
+}
+var name = 'window'
+var person1 = new Person('xx')
+console.log(person1.name) //xx
+
+4.2 实例2
+function Person (name) {
+  this.name = name
+  this.foo1 = function () {
+    console.log(this.name)
+  }
+  this.foo2 = function () {
+    return function () {
+      console.log(this.name)
+    }
+  }
+}
+var name = "测试test";
+var person1 = new Person('person1')
+person1.foo1()//person1
+person1.foo2()()//测试test
+
+4.3 实例3
+
+var name = 'window'
+function Person (name) {
+  this.name = name
+  this.foo = function () {
+    console.log(this.name)
+    return function () {
+      console.log(this.name)
+    }
+  }
+}
+var person2 = {
+  name: 'person2',
+  foo: function() {
+    console.log(this.name)
+    return function () {
+      console.log(this.name)
+    }
+  }
+}
+  
+var person1 = new Person('person1')
+person1.foo()() //person1; window
+person2.foo()() //person2; window
+
+4.4 实例四
+var name = 'window'
+function Person (name) {
+  this.name = name
+  this.foo = function () {
+    console.log(this.name)
+    return function () {
+      console.log(this.name)
+    }
+  }
+}
+var person1 = new Person('person1')
+var person2 = new Person('person2')
+
+person1.foo.call(person2)() //person2;window;
+person1.foo().call(person2) //person1;person2;
+
+```
+#### 箭头函数绑定
+通常情况下，this的指向遵循“谁最后调用就指向谁”的原则，但是箭头函数遵循另外的规则。
+箭头函数的this是定义时就确定了的，它本身没有this绑定，必须通过查找作用域链来决定其值.
+它里面的this是由上层作用域来决定(全局作用域，函数作用域，块级作用域)
+```
+5.1 实例1
+var obj = {
+  name: 'obj',
+  foo1: () => {
+    console.log(this.name)
+  },
+  foo2: function () {
+    console.log(this.name)
+    return () => {
+      console.log(this.name)
+    }
+  }
+}
+var name = 'window'
+obj.foo1() //window
+//本身没有this绑定，定义时决定。通过作用域链的形式。此箭头函数的上层作用域（只能是三种作用域之一）
+//不存在对象作用域，所以不会指向obj.
+//存在全局作用域window，指向window 
+obj.foo2()()//obj;obj
+//谁调用指向谁;箭头函数指向的是最近的上层作用域,是函数作用域 this指向了obj
+
+5.2 实例2
+
+var name = 'window'
+var obj1 = {
+	name: 'obj1',
+	foo: function () {
+		console.log(this.name)
+	}
+}
+
+var obj2 = {
+	name: 'obj2',
+	foo: () => {
+		console.log(this.name)
+	}
+}
+
+obj1.foo() //obj1
+obj2.foo() //window
+
+5.3 实例3
+
+var name = 'window'
+var obj1 = {
+  name: 'obj1',
+  foo: function () {
+    console.log(this.name)
+    return function () {
+      console.log(this.name)
+    }
+  }
+}
+var obj2 = {
+  name: 'obj2',
+  foo: function () {
+    console.log(this.name)
+    return () => {
+      console.log(this.name)
+    }
+  }
+}
+var obj3 = {
+  name: 'obj3',
+  foo: () => {
+    console.log(this.name)
+    return function () {
+      console.log(this.name)
+    }
+  }
+}
+var obj4 = {
+  name: 'obj4',
+  foo: () => {
+    console.log(this.name)
+    return () => {
+      console.log(this.name)
+    }
+  }
+}
+
+obj1.foo()() //obj1;window
+obj2.foo()() //obj2;obj2;
+obj3.foo()() //window;window
+obj4.foo()() //window;window
+
+5.4 实例4
+
+var name = 'window'
+function Person (name) {
+  this.name = name
+  this.foo1 = function () {
+    console.log(this.name)
+  }
+  this.foo2 = () => {
+    console.log(this.name)
+  }
+}
+var person2 = {
+  name: 'person2',
+  foo2: () => {
+    console.log(this.name)
+  }
+}
+var person1 = new Person('person1')
+person1.foo1() //person1
+person1.foo2() //person1 定义时决定了指向Person
+person2.foo2() //window 定义时决定了指向Window
+
+5.5 实例5
+var name = 'window'
+function Person (name) {
+  this.name = name
+  this.foo1 = function () {
+    console.log(this.name)
+    return function () {
+      console.log(this.name)
+    }
+  }
+  this.foo2 = function () {
+    console.log(this.name)
+    return () => {
+      console.log(this.name)
+    }
+  }
+  this.foo3 = () => {
+    console.log(this.name)
+    return function () {
+      console.log(this.name)
+    }
+  }
+  this.foo4 = () => {
+    console.log(this.name)
+    return () => {
+      console.log(this.name)
+    }
+  }
+}
+var person1 = new Person('person1')
+person1.foo1()() //person1;window
+person1.foo2()() //person1;person1
+person1.foo3()() //person1;window
+person1.foo4()()//person1;person1
+
+5.6 实例6
+箭头函数无this绑定，无法在箭头函数内部通过cba直接修改this指向，但是可以在其
+上层作用域操作实现间接地修改。
+
+var name = 'window'
+var obj1 = {
+  name: 'obj1',
+  foo1: function () {
+    console.log(this.name)
+    return () => {
+      console.log(this.name)
+    }
+  },
+  foo2: () => {
+    console.log(this.name)
+    return function () {
+      console.log(this.name)
+    }
+  }
+}
+var obj2 = {
+  name: 'obj2'
+}
+obj1.foo1.call(obj2)() //obj2;obj2
+obj1.foo1().call(obj2) //obj1;obj1
+obj1.foo2.call(obj2)() //window;window
+obj1.foo2().call(obj2) //window;obj2
+
+
+小结：
+ 1) 箭头函数内部没有this绑定，它内部的this指向在定义时就已经确定了，
+它只能通过作用域链指向上层作用域（全局、函数）之一。
+ 2) 箭头函数内部的this，无法在箭头函数外部直接通过cba改变指向。
+ 
+```
+#### this指向汇总
+```
+6.1 实例1
+
+var name = 'window'
+var person1 = {
+  name: 'person1',
+  foo1: function () {
+    console.log(this.name)
+  },
+  foo2: () => console.log(this.name),
+  foo3: function () {
+    return function () {
+      console.log(this.name)
+    }
+  },
+  foo4: function () {
+    return () => {
+      console.log(this.name)
+    }
+  }
+}
+var person2 = { name: 'person2' }
+
+person1.foo1() // 'person1'
+person1.foo1.call(person2) // 'person2'
+
+person1.foo2() // 'window'
+person1.foo2.call(person2) // 'window'
+
+person1.foo3()() // 'window'
+person1.foo3.call(person2)() // 'window'
+person1.foo3().call(person2) // 'person2'
+
+person1.foo4()() // 'person1'
+person1.foo4.call(person2)() // 'person2'
+person1.foo4().call(person2) // 'person1'
+
+6.2 实例2
+
+var name = 'window'
+function Person (name) {
+  this.name = name
+  this.foo1 = function () {
+    console.log(this.name)
+  },
+  this.foo2 = () => console.log(this.name),
+  this.foo3 = function () {
+    return function () {
+      console.log(this.name)
+    }
+  },
+  this.foo4 = function () {
+    return () => {
+      console.log(this.name)
+    }
+  }
+}
+var person1 = new Person('person1')
+var person2 = new Person('person2')
+
+person1.foo1() // 'person1'
+person1.foo1.call(person2) // 'person2'
+
+person1.foo2() // 'person1'
+person1.foo2.call(person2) // 'person1'
+
+person1.foo3()() // 'window'
+person1.foo3.call(person2)() // 'window'
+person1.foo3().call(person2) // 'person2'
+
+person1.foo4()() // 'person1'
+person1.foo4.call(person2)() // 'person2'
+person1.foo4().call(person2) // 'person1'
+
+
+6.3 实例3
+
+var name = 'window'
+function Person (name) {
+  this.name = name
+  this.obj = {
+    name: 'obj',
+    foo1: function () {
+      return function () {
+        console.log(this.name)
+      }
+    },
+    foo2: function () {
+      return () => {
+        console.log(this.name)
+      }
+    }
+  }
+}
+var person1 = new Person('person1')
+var person2 = new Person('person2')
+
+person1.obj.foo1()() // 'window'
+person1.obj.foo1.call(person2)() // 'window'
+person1.obj.foo1().call(person2) // 'person2'
+
+person1.obj.foo2()() // 'obj'
+person1.obj.foo2.call(person2)() // 'person2'
+person1.obj.foo2().call(person2) // 'obj'
+
+6.4 实例4
+
+function foo() {
+  console.log( this.a );
+}
+var a = 2;
+(function(){
+  "use strict"; //使用了"use strict"开启严格模式会使得"use strict"以下代码的this为undefined
+  foo(); //2 谁最后调用(这里是window)指向谁
+})();
+
+```
+
+### 闭包
+理论上的闭包:指的是能够访问自由变量的函数。
+即: 闭包 = 函数 + 函数能访问的自由变量。
+自由变量：不是函数的入参变量和本地变量，但是又是在函数内部可以访问的变量。
+
+#### 理论上的闭包示例
+
+```
+var a = 1;
+
+function foo() {
+    console.log(a);
+}
+
+foo(); //这也是典型的闭包
+
+```
+
+#### 实践中的闭包实例
+基本表现：函数调用返回了一个函数，返回的函数内部使用了自由变量。
+1 创建它的上下文即使销毁了，它依旧存在。
+2 自由变量引用。
+
+
+
+
 
 
 
