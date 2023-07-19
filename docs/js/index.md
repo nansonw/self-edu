@@ -187,8 +187,10 @@ test:if(a > 20 ){
 
 3 数据类型可以细分为 undefined null object 布尔 数值 字符串（undefined null 对象 是不是 数值 字符串）  
   1)null / undefined 是值为null/undefined 的数据类型，null类型只有一个值null,undefined类型只有一个值undefined.
-  2)null值的含义: null "空对象,空引用"; undefined值表示'默认值,缺省值,声明但是未显式地赋值'.
-  3)广义的对象 = 狭义的对象(object) + function + array .
+  2)null值的含义: null "空,空对象,空引用"; undefined值表示'默认值,缺省值,声明了但是未显式赋值的情况'.
+  3)广义的对象 = 狭义的对象(object) + function + array + 日期 + 正则 + Set + Map + Symbol + Bigint.
+  4) 数据类型两大类，基础和引用。一对一就是基础数据类型，一对多则是引用数据类型。
+     基于对象派生而出的数据类型都属于引用数据类型。
 
 4 数据类型判断:typeof(val) 
   i) val 是基本数据类型的值，返回对应基本数据类型名称.
@@ -565,6 +567,8 @@ undefined 表示"未定义的",它更像是一种隐式的语法现象的代名�
       ii)while 依赖length属性，遍历时不会跳过空位
       iii)arr.forEach(function(value,key,arr){//遍历时跳过空位,但是不会跳过显式地赋值为undefined的值
       })
+      iv) arr.indexOf(searchValue)//查看指定元素在数组中第一次出现的索引
+      v) const newArr = arr.slice([start,end})//按照入参指定方式处理原数组并将处理后的数组返回,左闭右开。
 
      2.3 “delete 操作” 和 “使用逗号分隔不主动赋值为undefined”会形成空位，空位和手动赋值为undefined是两个不同
      的概念，delete操作在删除数组元素的同时会形成空位，因而不会影响到数组的长度。
