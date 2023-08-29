@@ -199,7 +199,15 @@ test:if(a > 20 ){
   iv) val 没有声明或者没有赋值时都返回undefined
 
   小结:数据类型返回值是object除了object 还有 null array类型.
+
+5 数据类型的转换:判断时,为什么要尽量使用全等符合 ( 两个等号判断, 如果类型不同, 默认会进行隐式类型转换再比较)
+  5.1 记少不记多的原则：原始值->数值->字符串值->布尔值。
+  ## 当且仅当原始值是: undefined / null / false / 0 / NaN / "" (6)-> false（布尔值）
+  ## 当且仅当原始值是: undefined / NaN / 'Tw' / [1,2] / ['tw'] / function test(){} / {} (7)  -> NaN(数值) 
+
 ```
+![隐式类型转换](image.png)
+
 #### null 与 undefined
 ```
 null 表示"空值,空对象,空引用"，需要显式地进行赋值使用。参与数值运算时会为转换为0,参与逻辑运算时或被转换为false
@@ -720,9 +728,10 @@ function test(){
 }
 var fn = test();
 
- 3.2 闭包与垃圾回收和内存。
+ 3.2 垃圾回收和内存。
+  1) 内存的生命周期：内存的分配、内存的使用、内存的回收。触发内存回收的时机是变量/函数/对象是否不再使用。
 
- 3.2.1 GC机制：引用清除、标记清除（v8）。js会周期地自发地进行垃圾回收。
+  2) GC机制：引用清除（当对象之间存在循环引用时会造成内存泄露）、标记清除（v8）。js会周期地自发地进行垃圾回收。
 
 4 回调的理解:将函数作为形式参数的值，传入异步函数中，通常在异步请求完成（成功）后执行传入的函数调用。
 
@@ -860,6 +869,7 @@ myIntervalId.clear();
  1.3.2 对象展开运算符: let targetObj = {...sourceObj}
 
 1.4 常见的深拷贝方式
+```
  1.4.1 let targetObj = JSON.parse(JSON.Stringify(sourceObj)) ;
  这种拷贝方式，局限性较大,会忽略sourceObj对象中属性值是undefined,Symbol,函数类型的属性拷贝,存在循环
  引用时还会报错。
@@ -1014,6 +1024,7 @@ module.exports = {
     clone
 };
  ----------------end-----------------------
+```
 1.4.3 lodash等第三方库的深拷贝。
 
 ```
@@ -2036,6 +2047,38 @@ var a = 2;
 理论上的闭包:指的是能够访问自由变量的函数。
 即: 闭包 = 函数 + 函数能访问的自由变量。
 自由变量：不是函数的入参变量和本地变量，但是又是在函数内部可以访问的变量。
+
+#### 闭包的使用场景:变量的私有化
+
+```
+function Person() {
+  // 以 let 声明一个局部变量，而不是 this.name
+  // this.name = 'zs'     =>  p.name
+  let name = 'hm_programmer' // 数据私有
+  
+  this.getName = function(){ 
+    return name
+  }
+  
+  this.setName = function(value){ 
+    name = value
+  }
+}
+
+// new:
+// 1. 创建一个新的对象
+// 2. 让构造函数的this指向这个新对象
+// 3. 执行构造函数
+// 4. 返回实例
+const p = new Person()
+console.log(p.getName()) // hm_programmer
+
+p.setName('Tom')
+console.log(p.getName()) // Tom
+
+p.name // 访问不到 name 变量：undefined
+
+```
 
 #### 理论上的闭包示例
 
