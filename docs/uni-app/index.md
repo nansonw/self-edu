@@ -390,7 +390,7 @@ prop是单向数据流，在注入的地方应该保持该属性是只读的，�
 值后进行操作。
 
 
-sync修饰符和prop的自定义组件的类双向数据绑定,sync修饰符是在父组件中的语法糖。
+sync修饰符和prop的自定义组件的类双向数据绑定(自定义属性和属性变化事件相应),sync修饰符是在父组件中的语法糖。
 demo:
 #父组件
 -----------------
@@ -418,7 +418,18 @@ methods:{
     this.$emit('update:value',this.localValue);
   }
 }
+组件属性 = props + attrs
+props和attrs的异同点
+相同：都是父组件的属性
+不同：在子组件中被接受的父组件属性是prop;子组件中未显式接受的是attr
+attrs作为组件的属性对象,当前仅当属性名为style或class时会和子组件内部的同名属性进行合并，除此之外会发生父组件覆盖
+子组件中的同名属性。
 
+注意:在注册子组件时可以禁止子组件对父组件attrs的继承（inheritAttrs:false），但是style和class的属性继承不受到影响。
+```
+##### 5.3.5 components option obj
+```
+基础组件》业务组件》组件页面。
 
 ```
 
@@ -473,7 +484,7 @@ test-a 标签里面的内容是否被丢弃，取决于testA.vue组件里面是�
 ##father.vue
 <test-a>
   <template v-slot:header>我是自定义的头部</template>
-  <template #content>我是自定义内容</template>
+  <template #content='sonProp'>我是自定义内容{{sonProp}}</template>
   <template #footer'>我是自定义尾部</template>
   我啥也不是,默认座位
 </test-a>
@@ -506,6 +517,98 @@ v-slot:prop 简写 #prop
 </tempalte>
 
 ```
+#### 5.7 vue2 API(从整体到局部)
+应用级别》实例级别》组件级别（组件是更小的更基本的概念，对标标签）
+```
+1)全局配置:Vue.config.xx 系列
+```
+![全局配置](image-5.png)
+
+2)全局api:Vue.xx
+```
+组件/注入/过滤器/指令/nextTick/....
+```
+![全局api](image-6.png)
+
+3)Vue实例配置选项
+```
+组件实例化时支持传入的options配置项
+```
+![实例配置项](image-7.png)
+
+4)Vue实例的生命周期钩子函数
+```
+创建前后
+挂载前后
+更新前后
+销毁前后
+keep-alive激活前后
+后代错误捕获
+```
+![实例钩子](image-8.png)
+
+5)实例属性
+```
+组件配置项的部分映射
+```
+![实例属性](image-9.png)
+
+6) 实例方法
+```
+组件配置项的部分映射
+```
+![实例方法](image-10.png)
+
+7) 组件(标签)指令
+```
+v-show/v-if/v-else;v-for;v-html/v-text;
+v-model/v-bind
+v-on......
+```
+![vue组件指令](image-11.png)
+
+8) 组件（标签）属性
+```
+is/key/ref
+```
+![组件属性](image-12.png)
+
+[vue2 api](https://v2.cn.vuejs.org/v2/api/ ':include :type=iframe width=100% height=768px')
+
+#### 5.8 vuex(集中式状态管理,数据共享)
+```
+核心概念:状态管理(围绕state的增删改查，变更state的唯一且直接的方式是通过mutations) + 数据共享
+----------------------------------
+命名上除了state是单数形式，其它配置项都是复数的形式。
+对标vue实例配置
+state->data 数据响应式
+getters->computed 基于响应数据的依赖
+mutations/actions =>methods 
+-----------------------------------
+mutations(命名类比methods):只支持同步操作
+actions(命名类比methods):支持同步和异步操作,它会接手一个上下文对象（背景对象），这个对象和store实例有相同的属性和方法，在内部通过commit
+mutations的类型来实现间接地改变state。actions处理promsie对象时，返回的也是一个promise独享。
+
+注意:state的响应式，体现在视图层和data一样;不要直接更改state的值，唯一且推荐的做法是，通过mutations去管理state
+---------------------------------------
+vuex:modules?state/getters/mutations/actions 由这四大必选和一个可选模块构成。
+
+应用:在组件页面里面的读写语法糖。[mapState/mapGetters/mapMutations/mapActions]
+
+放置于组件实例的computed option内部的用来读取state的，放置于methods内部的是用来变更state的
+```
+![vuex项目代码结构](image-13.png)
+![computed中mapState读取](image-14.png)
+![基础vuex store写法](image-15.png)
+![computed中mapGetters读取](image-16.png)
+![基础mutations写法](image-17.png)
+![methods中普通commit触发mutations](image-18.png)
+![methods中语法糖mapMutations触发mutations](image-19.png)
+![基础actions写法,context commit触发mutations](image-20.png)
+![methods中普通dispatch触发actions](image-21.png)
+![methods中语法糖mapActions中触发actions](image-22.png)
+
+
 
 
 
