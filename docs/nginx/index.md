@@ -1,7 +1,39 @@
 ## nginx 
+### 在linux上安装nginx
+```
+一 安装及简单配置
+1.1 在/usr/local目录下新建一个nginx文件夹.
+1.2 安装编译工具和库文件：yum -y install make zlib zlib-devel gcc-c++ libtool  openssl openssl-devel pcre-devel
+1.3 切换到新建的nginx文件夹，cd /usr/local/nginx,执行 sudo yum install wget,然后下载nginx的压缩文件
+   下载nginx的压缩文件: wget https://nginx.org/download/nginx-1.18.0.tar.gz
+   解压nginx的压缩文件: tar -zxvf nginx-1.18.0.tar.gz
+ 
+1.4 进入安装包的目录。cd nginx-1.18.0
+1.5 编译安装nginx。
+    #编译
+    ./configure --prefix=/usr/local/nginx
+    #安装
+    make && make install
+
+1.6 查看nginx的安装位置.whereis nginx
+1.7 编写nginx.conf文件。查看模块二的基本结束
+1.8 检查核对nginx.conf的书写是否正确。/usr/local/nginx/sbin/nginx -t
+1.9 启动，重启nginx.
+  #切换到nginx可执行命令目录
+  cd /usr/local/nginx/sbin/
+  #启动nginx
+  ./nginx 
+  #停止nginx
+  ./nginx -s stop
+  #退出nginx
+  ./nginx -s quit
+  #重启nginx
+  ./nginx -s reload
+
+```
 ### 基础常识
 ```
-一 基本介绍
+二 基本介绍
 1 main配置（全局配置）在其它地方都可见，影响其它所有的配置
 2 events（工作进程相关配置）
 3 http（可以包含多个server）
