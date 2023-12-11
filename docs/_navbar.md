@@ -1,6 +1,10 @@
 * [HTML](html/index)
 * [CSS](css/index)
 * [JS](js/index)
-* [Other](other/index)
+* [Http](http/index)
+* [Browser:浏览器](browser/index)
+* [Nginx](nginx/index)
+* [Git](git/index)
 * [Uni-app](uni-app/index)
-
+* [Other](other/index)
+* [参考](reference/index)
