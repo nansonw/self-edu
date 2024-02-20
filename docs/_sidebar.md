@@ -1,6 +1,7 @@
 * [HTML](html/index)
 * [CSS](css/index)
 * [JS](js/index)
+* [Typescript](typescript/index)
 * [Http](http/index)
 * [Browser:浏览器](browser/index)
 * [Nginx](nginx/index)
