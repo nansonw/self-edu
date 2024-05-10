@@ -2676,13 +2676,676 @@ export default {
 
 </script>
 
-小结：在setup函数中管理数据项并按需暴露给外部使用,setup函数也可以是一个渲染函数。
+@setup 语法糖:简化了setup函数的写法,只需定义数据项和方法,默认会自动返回。
+<script setup lang="ts">
+    let name = ref("张三")//定义响应式数据项
+    let age = ref(18)
+    let tel = ref("123456789")
+    
+    const changeName = () =>{
+      name.value = "李四" //弱化this,在setup钩子中,this是undefined.
+    }
+    const changeAge = () =>{
+      age.value = 20
+    }
+    const showTel = () =>{
+      console.log(tel.value)
+    }
+</script
 
+ 
+小结：在setup函数中管理数据项并按需暴露给外部使用,setup函数也可以是一个渲染函数。setup
+语法糖会自动暴露无需手动返回。
 
 三 setup数据项集中式 vs data/methods/..分散式
 
-[1] setup函数，可以和data,methods同时使用，但是不推荐这样做。
+[1] setup函数,可以和data,methods同时使用，但是不推荐这样做。
 [2] data可以访问setup函数中的数据项（this.x），methods可以访问setup函数中的方法，反之不行
 
 [3] 小结：setup是个比beforeCreate更早执行的生命周期钩子函数。内部无法访问this.
+
+四 vue3 中的响应式数据
+
+4.1 ref: 创建一个基本数据类型的响应式数据项。在模版中使用时不需要.value的形式进行访问，
+在js中使用时需要.value的形式访问。使用ref()包装的基本数据类型会返回一个refImpl对象,成为响应式的基本数据类型。
+使用ref包装后的引用类型将返回一个refImpl对象,成为响应式的引用数据类型
+
+
+import {ref} from "vue"
+let name = ref("张三")//定义响应式数据项 
+const changeName = () =>{
+    name.value = "李四" 
+-------------------------------------------------------------------
+4.2 reactive: 只能创建一个引用类型的响应式数据项。使用reactive()函数包装的引用类型会返回一个Proxy对象实例，
+成为响应式的引用类型。
+
+import {reactive} from "vue"
+//无视源对象的嵌套层级，使用reactive包装后都会成为响应式应用类型。
+let newObj = reactive({
+  obj:{
+    a:{
+      b:{
+        c:{
+          id:1212
+        }
+      }
+    }
+  }
+})
+
+const changeObj = ()=>{
+  newObj.obj.a.b.c.id = 444
+}
+
+小结:[1] 使用ref包装后的（基本）数据类型将成为响应式（基本）数据类型,在模版和js中访问时略有差异;
+     [2] 使用reactive包装后的引用类型将成为响应式引用类型,在模版和js中访问时无差异。
+
+-----------------------------------------------------------------
+4.3 toRef/toRefs 
+[1] toRef: 将一个响应式的引用数据类型的单个属性值转换成一个响应式的基本数据类型.
+[2] toRefs: 将一个响应式的引用数据类型的多个属性值批量转换成一个响应式的基本上数据类型，常用
+在数据的解构中用于保持数据的响应式和关联性。
+
+<script setup lang="ts">
+const person = reactive({
+  name:"张三",
+  age:18
+})
+let {name,age} = toRefs(person) 
+const changeName = ()=>{
+  name.value = "李四" //这个操作会影响到源对象。
+}
+let single = toRef(person,"age")
+
+const changeSingle = ()=>{
+  single.value = 20 //这个操作会影响到源对象。
+}
+
+</script>
+
+
+五 vue3中的计算属性
+ [1] computed也是按需从vue中引入的,使用computed()函数包装后的数据将等效于ref()函数包装后的数据返回
+ [2] computed数据是有依赖缓存的，这点和函数每次调用都要重新执行不同,computed数据只会在依赖项发生变化时才重新计算。
+ [3] computed数据项默认是只读的，要想修改computed数据项,必须传入描述器对象。
+
+ <script setup lang="ts">
+  import {ref,computed} from "vue";
+  let firstName = ref("张");
+  let lastName = ref("三");
+  //定义只读的计算属性
+  let fullName = computed(()=>{//默认只读
+    return firstName.value + lastName.value
+  })
+
+  //试图直接更改fullname的值会引发报错
+  function changeFullName() {
+    fullName.value = "李四" //此时是无法更改的
+  }
+  //定义可读写的计算属性
+  let newFullName = computed({
+    get(){
+      return firstName.value + lastName.value
+    },
+    set(val){
+      firstName.value = val.slice(0,1);
+      lastName.value = val.slice(1)
+    }
+  })
+  //更改可读写的计算属性，内部是通过更改依赖项来实现的
+  function changeNewFullName(){
+    newFullName.value = "王五" //触发计算属性的set钩子
+  }
+
+ 
+ </script>
+
+
+ 六 vue3中的watch
+ [1] 按需引入,监视ref定义的基本数据类型.
+ <script setup lang="ts">
+ import {ref,watch} from "vue";
+ let sum = ref(0)
+ //更改sum的值,触发watch监听器
+ function changeSum(){
+  sum.value += 1
+ }
+ //watch()函数会返回一个函数,调用这个函数可以断开数据的监听。
+ const stopWatch = watch(sum,(newValue,oldValue)=>{
+  console.log("nv:ov",newValue,oldValue)
+  if(newValue > 10){
+    stopWatch()//断开监听
+  }
+ })
+
+ </script>
+-----------------------------------------------
+ [2] 监视ref定义的整个引用数据类型，需手动开启深度监听，可整体替换
+ <script setup lang="ts">
+ import {ref,watch} from "vue";
+ let person = ref({
+  name:"张三",
+  age:18
+ })
+
+function changeName(){
+  person.value.name += '~'
+}
+function changeAge(){
+  person.value.age += 1
+}
+function changePerson(){
+  person.value = {name:"李四",age:20}
+}
+
+/*
+默认情况下监听引用数类型类型时，监听的是它地址的变化，只有整个对象被替换掉才会触发回调
+只有调用changePerson()才会触发回调
+watch(person,(newValue,oldValue)=>{
+
+})
+*/
+
+//开启了深度监听后修改对象的属性和替换对象都会触发回调,任意函数调用都会触发回调
+wathc(person,(nv,ov)=>{
+
+},{deep:true})
+
+!!注意: 在只修改对象属性时,nv,ov都是同一个对象,是相同的;
+        在发生对象替换时,nv,ov是不同的对象,是不同的。
+
+ </script>
+-------------------------------------------------
+[3] 监视reactive定义的整个引用数据类型，无需手动开启深度监听，不可整体替换
+<script setup lang="ts">
+import {reactive,watch} from "vue";
+let person = reactive({
+  name:"张三",
+  age:18
+})
+function changeName(){
+  person.name += '~'
+}
+function changeAge(){
+  person.age += 1
+}
+function changePerson(){
+  //person = {name:"李四",age:20} 注意这个操作会让person更换成新地址,失去响应式。
+  Object.assign(person,{name:"李四",age:20}) //保持preson的响应式，不更改地址，而是覆盖更新
+}
+/*
+监视reactive定义的引用数据类型时会默认开启深度监听，且这个监听无法手动关闭;
+由于reative定义的引用类型无法对对象进行整体替换而只能进行覆盖更新，定义的对象始终是相同的,所以
+nv,ov始终是相同的。
+*/
+watch(person,(nv,ov)=>{
+
+})
+
+</script>
+
+[4] 监视ref或者reactive定义的引用数据类型的部分属性
+<script setup lang="ts">
+let person = reactive({
+  name:"张三",
+  age:18,
+  car:{
+    brand_1:"奔驰",
+    brand_2:"宝马"
+  }
+})
+function changeName(){
+  person.name += '~'
+}
+function changeAge(){
+  person.age += 1
+}
+function changeCar1(){
+  person.car.brand_1 = "奥迪"
+}
+function changeCar2(){
+  person.car.brand_2 = "法拉利"
+}
+function changeCar(){
+  person.car = {brand_1:"帕拉梅拉",brand_2:"劳斯莱斯"}
+}
+/*
+  [!!注意,一般情况下,watch只能监听ref/reactive/getter函数(返回一个值的函数)]
+  //不符合watch可监听的范畴，会报错
+  watch(person.name,(nv,ov)=>{
+
+  })
+*/
+//修改person.name属性时,触发回调
+watch(()=>person.name,(nv,ov)=>{
+
+})
+//修改car属性或者替换car地址时都会触发回调
+watch(()=>person.car,(nv,ov)=>{
+
+},{deep:true})
+
+小结:在监听ref或者reactive定义的响应式引用数据类型的部分属性时，建议使用getter函数的形式进行监听。
+
+</script>
+--------------------------------------
+
+[5] 批量监听,watch上数可监听项组成的数组.
+<script setup lang="ts">
+let person = reactive({
+  name:"张三",
+  age:18,
+  car:{
+    brand_1:"奔驰",
+    brand_2:"宝马"
+  }
+})
+function changeName(){
+  person.name += '~'
+}
+function changeAge(){
+  person.age += 1
+}
+function changeCar1(){
+  person.car.brand_1 = "奥迪"
+}
+function changeCar2(){
+  person.car.brand_2 = "法拉利"
+}
+function changeCar(){
+  person.car = {brand_1:"帕拉梅拉",brand_2:"劳斯莱斯"}
+}
+//同时监听person.name和person.car属性的变化
+watch([()=>person.name,()=>person.car],(nv,ov)=>{
+
+},{deep:true})
+
+</script>
+
+[6] watchEffect:更智能的数据监听,在回调函数中调用[读取]时开启自动智能监听数据项,
+无需手动指定监听数据项。
+
+<script setup lang="ts">
+import {ref,watchEffect} from "vue";
+let temp = ref(10)
+let height = ref(0)
+
+function changeTemp(){
+  temp.value += 10
+}
+function changeHeight(){
+  height.value += 10
+}
+//会立马执行一次，看做是默认开启了immediate:true这个配置项。
+watchEffect(()=>{//在回调中使用的响应式数据会触发自动开启智能监听
+  if(temp.value >= 60 || height.value >= 100) {//这个读取操作会智能开启需要进行监听的数据项
+    console.log('已经向服务器发送请求了')
+  }
+})
+
+</script>
+--------------------------------------------------
+七 vue3 标签上的ref属性:获得dom中同名标记元素的引用
+<template>
+  <div>
+    <h2 ref='cE'>我是普通元素标签</h2>
+    <!-- 这是组件元素标签 -->
+    <person ref='cpE'/>
+  </div>
+</template>
+
+<script setup lang="ts">
+ //只需要引入，无需再注册即可使用
+ import person from './components/person.vue'
+ import {ref} from 'vue' 
+
+ //声明一个与页面元素引用同名的变量以获得元素的引用 
+ let cE = ref() //获得dom中ref标记cE的[普通]元素的引用 
+ let cpE = ref() //获得dom中ref标记cpE的[组件]元素的引用
+
+ function showRef(){
+  console.log(cE.value) //获得的是一个元素节点对象
+  console.log(cpE.value) //获得的是一个组件实例对象,这个组件实例上的数据和方法默认不可见
+  /*
+  父元素默认无法通过标记引用访问到子元素的数据,除非子元素主动透露给父元素
+  这是vue3和vue2中的不同之处
+  */
+ }
+</script>
+
+<!-- person.vue -->
+<template>
+<div><h2>我是组件元素标签</h2></div>
+</template>
+<script setup lang="ts">
+  <!-- 在vue中definexx 系列api属于全局的宏,可以不用显式地进行引入就可以直接使用  -->
+  import {ref,defineExpose} from 'vue'
+  let a = ref(10)
+  let b = ref(20)
+  let c = ref(30)
+  //子元素暴露给父元素可直接访问的数据
+  defineExpose({a,b})
+</script>
+--------------------------------------------------
+八 vue3 中使用ts
+[1] 指定约束和规范，用于在代码编写阶段就能及时发现错误。
+<!-- types/index.ts -->
+
+<!-- 定义一个接口规范 -->
+export interface PersonInterface {
+  name:string,
+  id:string,
+  age:number
+}
+<!-- 定义一个自定义类型规范 -->
+export type Persons = Array<PersonInterface>//约定数组元素需要满足接口的规范。
+export type PersonList = PersonInterface[] //约定数组是有满足接口规范的元素组成。
+
+<!-- demo.vue -->
+<template>
+  <div><h2>测试</h2></div>
+</template>
+<script setup lang="ts">
+import {ref,reactive} from 'vue'
+<!-- 作为类型规范和约束,在引入时需要type 标记说明 -->
+import {type PersonInterface, type Persons} from '@/types'
+let person:PersonInterface = ref({
+  id:'abc122',
+  name:'张三',
+  age:18,
+})
+//推荐:写法一
+let personList = reactive<Persons>([
+  {id:'abc122',name:'张三',age:18},
+  {id:'abc124',name:'李四',age:20},
+])
+//写法二
+let memberList:Persons = ref([
+  {id:'abc125',name:'王五',age:18},
+  {id:'abc126',name:'赵六',age:20},
+])
+
+</script>
+-------------------------------
+九 vue3中 父子组件的通讯
+<!-- father.vue -->
+<template>
+  <div>
+    <persons :list= 'personList'></persons>
+  </div>
+</template>
+<script setup lang="ts">
+ import {reactive} from 'vue'
+ import {type Persons} from '@/types'
+  let personList = reactive<Persons>([
+  {id:'abc125',name:'王五',age:18},
+  {id:'abc126',name:'赵六',age:20},
+  ])
+
+</script>
+
+<!-- son.vue -->
+<template>
+<div>
+  <ul>
+    <li v-for='item in list' :key='item.id'>
+      {{item.name}} - {{item.age}}
+    </li>
+  </ul>
+</div>
+</template>
+<script setup lang="ts">
+import {type Persons} from '@/types'
+import {withDefaults} from 'vue'
+ //无条件的接收
+ let list = defineProps(['list'])
+ //满足特定约束条件才接收
+ let list2 = defineProps<{list:Persons}>()
+//满足特定约束条件才接收,并提供缺省值
+let list3 = withDefaults(defineProps<{list?:Persons}>(),{
+  list:()=>[{id:'abc125',name:'王五',age:18}] //缺省值是数组，必须由函数返回缺省值。
+})
+
+</script>
+---------------------------------------------------
+十 vue 的生命周期
+
+[1] vue2的生命周期
+#1.1 页面组件的生命周期：创建前后 | 挂载前后| 更新前后(仅此钩子会在数据更新时重复触发) | 销毁前后 共计8个组件钩子。
+创建阶段:beforeCreate,created
+挂载阶段:beforeMount,mounted
+更新阶段:beforeUpdate,updated
+销毁阶段:beforeDestroy,destroyed
+---------------------------------------------------- 
+[2] vue3的生命周期
+创建阶段:setup() === beforeCreate() + created()
+挂载阶段:onBeforeMount(),onMounted()
+更新阶段:onBeforeUpdate(),onUpdated()
+卸载阶段:onBeforeUnmount(),onUnmounted()
+------------------------------------------------------
+十一 vue3中的自定义钩子(按功能拆分js|ts 文件模块)
+[1] 自定义钩子都是以 useXx系列开头命名的js|ts 文件
+@改造前
+<!-- demo.vue -->
+<template>
+  <div>
+    <h2>测试</h2>
+    <div>{{sum}}</div>  
+    <button @click='add'>点击求和</button>
+    <hr/>
+    <!-- 狗图 -->
+    <img v-for='(dog,index) in dogList' :src='dog' :key='index'/>
+    <button @click='getDog'>再弄一张狗图</button>
+  </div>
+</template>
+
+<script setup lang="ts">
+import {ref,reactive} from 'vue'
+import axios from 'axios'
+let sum = ref(0)
+let dogList = reactive([])
+/**
+ 首先需要在项目中安装axios
+ */
+function add(){
+  sum.value += 1
+}
+async function getDog(){
+  try{
+    let res = await axios.get('https://dog.ceo/api/breeds/image/random');
+    dogList.push(res.data.message);
+  }catch(err){
+    console.log(err)
+  }
+}
+
+</script>
+
+
+@改造后:按功能模块自行拆分
+<!-- upgrade deom.vue -->
+<template>
+  <div>
+    <h2>测试</h2>
+    <div>{{sum}}</div>  
+    <button @click='add'>点击求和</button>
+    <hr/>
+    <!-- 狗图 -->
+    <img v-for='(dog,index) in dogList' :src='dog' :key='index'/>
+    <button @click='getDog'>再弄一张狗图</button>
+  </div>
+</template>
+<script setup lang="ts">
+  import useSum from '@/hooks/useSum'
+  import useDog from '@/hooks/useDog'
+  //模块化重用:组合式的优势,同名钩子会自动合并处理
+  let {sum,add} = useSum()
+  let {dogList,getDog} = useDog()
+
+</script>
+
+<!-- 以下是按功能模块进行划分的结果：又可以称之为"自定义钩子" -->
+<!-- 求和模块钩子 useSum.ts -->
+//约定自定义钩子重用模块必须以 useXX开头
+import {ref,onMounted} from 'vue'
+export default function useSum(){
+  let sum = ref(0)
+  function add(){
+    sum.value += 1
+  }
+  onMounted(()=>{
+    console.log('我是求和中回调')
+  })
+  //务必要记得返回
+  return {sum,add}
+}
+<!-- 获狗模块钩子 useDog.ts -->
+import {reactive,onMounted} from 'vue'
+import axios from 'axios'
+export default function useDOg(){
+  let dogList = reactive([])
+  async function getDog(){
+    try{  
+       let res = await axios.get('https://dog.ceo/api/breeds/image/random'); 
+       dogList.push(res.data.message);
+    }catch(err){
+      console.log(err)
+    }
+  }
+  onMounted(()=>{
+    console.log('我是狗中回调')
+  })
+  //务必要记得返回
+  return {dogList,getDog}
+
+}
+
+------------------------------------------------------
+十二 vue3中的路由系统 (路由器) vue-router
+[1] 路由:一个kv的映射关系,体现的是路径和组件之间的映射关系;
+[2] 路由规则:所有kv的映射关系的集合,体现的是整个应用的路径和组件的映射关系;
+[3] 路由器:管理路由规则的集中入口.创建路由器对象,管理路由规则,管理路由跳转,管理路由组件的加载.
+[4] 路由器的工作模式：
+   1.hash模式:路由地址中包含#,不美观,不利于SEO,常用在管理后台.
+   2.history模式:路由地址中不包含#,美观,便于SEO,常用在电商项目,上线时需要配置合适的nginx配置,
+   否则在主动刷新页面时会404
+
+[5] router导航跳转的两种形式:RouterLinkk组件式导航和this.$router.xx 系列编程式导航
+[6] 组件式导航to 的可选参数形式：直接写一个path的字符串; 动态绑定一个对象,设置其path属性或者name属性
+name属性仅当路由命名后才可以使用。
+   <RouterLink to="/about">关于</RouterLink>
+   <RouterLink :to="{name:'about'}">关于</RouterLink>
+   <RouterLink :to="{name:'user',params:{id:1} }">用户</RouterLink>
+   <RouterLink :to="{path:'/user?name=zhangsan&age=18&salary=1800'}">用户</RouterLink>
+
+[7] 命名路由和嵌套路由：
+   1.命名路由:在配置路由规则(routes)配置项时,给路由配置添加了name属性
+   2.嵌套路由:多层级的路径导航配置，存在纵向的路径关系，需要在路由规则配置children配置项
+   表现为在一个一级路由页面又可以导航到子路由页面，并在当前路由界面提供路由出口。
+
+[8] 组件式路由导航传参和接收：
+ <!-- 接收方 -->
+ <template>
+  <div>{{ route.query.name }}</div>
+  <div>{{ query.age }}</div>
+ </template>
+ 
+ <script setup lang="ts">
+ //自定义内置的路由钩子,需要手动进行引入
+ import {useRoute} from 'vue-router'
+ import {toRefs} from 'vue'
+
+ let route = useRoute()//获取当前路由对象
+ let {query} = toRefs(route)//批量解构对象，保持其解构属性的响应式
+ </script>
+       
+----------------------------------------------------------------------
+ #1 为初始应用添加路由器拓展
+ npm install vue-router
+
+ #2 创建路由器对象
+ //需要在创建路由器对象时指定
+ @ router/index.ts
+ #index.ts
+ import {createRouter,createWebHashHistory} from 'vue-router'
+ import Home from '@/views/Home.vue'
+ import About from '@/views/About.vue'
+ import User from '@/views/User.vue'
+
+ const router = createRouter({
+  history:createWebHashHistory(),
+  //路由规则
+  routes:[
+    {path:'/',component:Home},
+    {
+      path:'/about',component:About,
+      children:[
+        {path:'home',component:aboutH,name:'aH'},
+        {path:'rules',component:aboutR,name:'aR'}
+      ]
+    }
+    {path:'/user/:id',component:User}
+  ] 
+ })
+ export default router
+
+ #3 为当前应用添加路由系统
+ # main.ts
+ import router from './router'
+ /*
+ 以App组件为组件树的根开始递归创建应用,
+ 并使用路由系统进行管理，最后挂载到页面上.
+ */
+ createApp(App).use(router).mount('#app')
+ 
+ #4 为匹配的路由组件提供路由出口,以显示或切换内容
+ # App.vue
+ <template>
+ <div id="app">
+    <!-- 顶部导航栏 -->
+    <div class="nav">
+      <RouterLink to="/" active-class="active">首页</RouterLink>
+      <RouterLink to="/about" active-class="active">关于</RouterLink>
+      <RouterLink to="/user/123" active-class="active">用户</RouterLink>
+    </div>
+    <!-- 路由出口 -->
+    <div class="content">
+       <RouterView></RouterView>
+    </div>
+   
+ </div>
+ </template>
+ 
+ <script setup lang="ts">
+  <!-- 在使用路由出口时需要手动引入 -->
+  import {RouterLink,RouterView} from 'vue-router'
+ </script>
+
+<!-- aobut 页面:路由嵌套存在后代层级路由 -->
+<template>
+  <div>
+    <ul>
+      <li>
+      <RouterLink to="/about/home">关于主页</RouterLink>
+      </li>
+      <RouterLink to="/about/rules">关于公司规定</RouterLink>
+    </ul>
+    <!-- 内容区域 -->
+    <div class="content">
+      <!-- 子路由出口 -->
+      <RouterView></RouterView>
+    </div>
+  </div>  
+</template>
+
+ ---------------------------------------------------------
+ 十三 工程化项目中的默认规则
+ [1] 路由组件（路由规则配置的组件）放在pages/views目录下;
+ [2] 一般组件,需要在页面模版内手动书写的组件,放在components目录下;
+ 
+ ---------------------------------------------------------
+ 十四 
+ 
+
+
 ```
