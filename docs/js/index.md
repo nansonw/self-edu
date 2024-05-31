@@ -2094,27 +2094,570 @@ foo(); //这也是典型的闭包
 ```
 
 #### 实践中的闭包实例
+```
 基本表现：函数调用返回了一个函数，返回的函数内部使用了自由变量。
 1 创建它的上下文即使销毁了，它依旧存在。
 2 自由变量引用。
+```
+
+## js中的设计模式
+### 面向对象的核心原则
+```
+--------------------------------------------------------------------
+一 单一职责原则（SRP）
+【一个类（或对象、模块）应该只有一个引起它变化的原因。这意味着一个类应该只有一个职责，它的所有方法都应该紧密相关并服务于这个职责】
+
+-------------------------------------------------------------------
+二 开放封闭原则（OCP）
+【软件实体（如类、模块、函数等）应当对扩展开放，对修改关闭。也就是说，当需求改变时，应该通过扩展已有代码，而不是修改已有的代码来实现变化】
+-------------------------------------------------------------------
+```
+### 前置知识
+#### 鸭子类型
+```
+js作为动态类型语言,关注的是对象的行为而不是对象是什么。往往是根据对象的行为来判断对象类型。
+如果一个对象具有push,pop方法且有正确实现，就会觉得对象是个栈。
+has-What > is-What 
+```
+#### 多态理解
+```
+多态可以简单地理解为，同一行为指令在不同对象上的不同表现。体现了“因地制宜，共性集中,个性分离”的思想
+将做什么和谁去做分离.找到变化并封装之
+主要实现方式：继承
+举例说明：发声
+#改造前:存在多条件分支
+function makeSound(animal){
+  if(animal instanceof Cat){
+    console.log('miao miao miao')
+  }
+  if(animal instanceof Dog){
+    console.log('wang wang wang')
+  }
+  if(animal instanceof Duck){
+    console.log('quack quack quack')
+  }
+}
+let Cat = function(){}
+let Dog = function(){}
+let Duck = function(){}
+makeSound(new Cat())
+makeSound(new Dog())
+makeSound(new Duck())
+
+改造前的最大问题，每次新增对象，都要更改makeSound函数，以适配新增对象。
+
+#改造后：改造方向，集中共性，分离个性.消除条件分支,实现多态
+function makeSound(animal){
+  animal.sound()//共性:发声 "做什么"
+}
+function Cat(){}
+function Dog(){}
+function Duck(){}
+//个性：具体对象定义谁做和怎么做
+Cat.prototype.sound = function(){
+  console.log('miao miao miao')
+}
+Dog.prototype.sound = function(){
+  console.log('wang wang wang')
+}
+Duck.prototype.sound = function(){
+  console.log('quack quack quack')
+}
+makeSound(new Cat())
+makeSound(new Dog())
+makeSound(new Duck())
+```
+#### this 与 call bind apply
+```
+一 this的指向
+1)this是运行时绑定的概念，遵循一个原则，即“谁调用指向谁”。作用域是在声明定义时就确定好了的
+2)this 只会在函数,方法，构造器中使用，this遵循谁调用指向谁;隐式调用,非严格模式下指向宿主环境的
+顶层对象如window,严格模式下指向undefined。
+
+二 方法借用，改变方法内部的this指向
+1）func.apply(obj,arrArge) //执行func函数的时候,将func函数内的this指向obj,接收参数arrArgs。
+   func.call(obj,arg1,arg2,arg3)
+   func.apply(null,arrArgs=[])///执行func函数的时候,接收参数arrArgs，不显式指定this指向，默认指向宿主环境。
+
+2) 可以直接借用js中函数，数组，字符串等内置的方法，前提是双方是同类
+```
+#### 闭包与高阶函数
+```
+#1 作用域与作用域链：从本地（局部）向顶层（全局）逐步搜寻变量。内层可以访问外层，反之不行。
+#2 闭包：函数嵌套函数，内层函数可以访问外层函数的变量，内层函数可以访问到全局变量。内层函数
+引用外层函数变量导致外层函数调用后，被引用的外层环境变量没有被回收。
+
+#3 浏览器的垃圾回收机制：引用计数法和标记清除法（现代浏览器中使用）。
+一  闭包的作用
+1.1 私有化变量
+@改造前
+var cache = {};
+var multiply = function () {
+  let key = Array.prototype.join.call(arguments, ',');
+  if(cache[key]){
+    return cache[key];
+  }
+   for(let i=0 ,len = arguments.length; i<len; i++){
+      a = arguments[i] * a;
+    }
+    return cache[key] = a;
+}
+let a = multiply(1,2,3,4);
+let b = multiply(1,2,3,4);//直接从缓存中取值，不再参与计算
+
+@改造后
+var multiply = function (){
+  var cache = {};//封装变量,私有化cache为局部变量
+  return function(){
+    var a =1
+    let key = Array.prototype.join(arguments,',') ;
+    if(cache[key]){
+      return cache[key];
+    }
+    for(let i=0 ,len = arguments.length; i<len; i++){
+      a = arguments[i] * a;
+    }
+    return cache[key] = a;
+  }
+  
+}
+
+1.2 延长变量的生命周期：函数中的局部变量默认情况下，在函数调用结束后就会被销毁。
+function sumUp(){
+  var total = 0;
+  return function(){
+    for(var i=0,len=arguments.length;i<len;i++){
+      total += arguments[i];
+    }
+    return total;
+  }
+}
+const sum = sumUp();//这时内部函数引用用了total,函数调用完不会销毁total
+let result = sum(1,2,5,7,8)//如果后续不再调用sum,则销毁total
+
+
+二 高阶函数
+2.1 高阶函数的界定标准：输入或输出了函数
+#1 函数作为输入：函数作为参数传入
+#2 函数作为输出：函数作为返回值返回
+
+```
+
+### 1 原型模式
+```
+创建对象的模式：基于类创建 / 基于原型创建(JS)
+1)常规面向对象语言,通过类的方式创建对象：先指定对象的类型，以类型为模版创建对象。
+
+2)js通过克隆对象的方式得到对象，以对象为模版克隆出新对象。使用原型模式构建面向对象系统，所有对象都是通过克隆对象得到的
+var Plane = function(){
+  this.blood = 100
+  this.fire = function(){
+    console.log('发射子弹')
+  }
+  this.defendLevel = 7
+}
+//通过构造函数来创建对象
+var plane = new Plane()
+//通过Object.create()来创建对象 
+var cloneplane = Object.create(plane)
+
+3)es6中新增了class关键字，通过class关键字来创建对象,本质上依旧是基于原型进行对象创建。只是一种编程语法糖
+
+小结：原型模式是设计模式也是一种编程范式，是js对象系统的核心
+```
+### 2 单例模式
+```
+遵循单一职责的原则下优化后的单例模式
+//管理单例
+var getSingleTon = function(fn){//传入的fn是用来首次创建实例的函数
+  var obj;//用来标记实例
+  return function(){//将返回一个对象
+    return obj || (obj = fn.apply(this,arguments))
+  }
+}
+//创建div实例
+var createDiv = function (htmlCnt){
+ let div = document.createElement('div');
+ div.innerHTML = htmlCnt;
+ div.style.display = 'none';
+ document.body.appendChild(div);
+ return div
+}
+let singletonDiv = getSingleTon(createDiv);//得到一个闭包的匿名函数返回。
+
+document.getElementById('btn').onclick = function(){
+  let instance = singletonDiv('我是创建的div1');//执行匿名函数
+  instance.style.display = 'block';
+}
+
+小结：单例模式通常遵循在合适的时机创建唯一的对象实例。
+```
+### 3策略模式
+```
+3.1 策略模式主要与两个概念关联，一个是上下文的概念，一个是策略的概念。
+上下文：在上下文中，体现的是共性的内容，也就是不会变化的部分;
+策略: 不同的算法实现封装在独立的函数中，在上下文中，通过调用不同的函数，实现不同的算法。
+
+//策略模式可能适用的场景
+一 存在较多条件判断的代码
+@优化前
+var caculatBonus = function (salary, grade){
+  if(grade === 'A') {
+    return salary * 2
+  }
+  if(grade === 'B') {
+    return salary * 1.2
+  }
+  if(grade === 'C'){
+    return salary * 1.1
+  }
+
+}
+@优化后
+var calcBonus = function (salary, grade){
+  //上下文中体现的是固定的内容，根据评级选择bonus的策略
+  return Policy[grade](salary)
+}
+var Policy = {
+  'A':function (salary){
+    return salary  * 2
+  }
+  'B':function (salary){
+    return salary * 1.2
+  }
+  'C':function (salary){
+    return salary * 1.1
+  }
+}
+let bonusA = calcBonus(10000,'A')
+
+二 表单校验规则快速调整复用
+
+// 验证策略接口
+function ValidationStrategy() {}
+
+ValidationStrategy.prototype.validate = function (value) {
+  throw new Error("子类必须实现validate方法");
+};
+
+ValidationStrategy.prototype.getErrorMessage = function () {
+  throw new Error("子类必须实现getErrorMessage方法");
+};
+
+// 具体的验证策略
+function RequiredStrategy() {}
+
+RequiredStrategy.prototype = Object.create(ValidationStrategy.prototype);
+RequiredStrategy.prototype.validate = function (value) {
+  return value.trim() !== "";
+};
+RequiredStrategy.prototype.getErrorMessage = function () {
+  return "此字段为必填项";
+};
+
+function MinLengthStrategy(minLength) {
+  this.minLength = minLength;
+}
+
+MinLengthStrategy.prototype = Object.create(ValidationStrategy.prototype);
+MinLengthStrategy.prototype.validate = function (value) {
+  return value.length >= this.minLength;
+};
+MinLengthStrategy.prototype.getErrorMessage = function () {
+  return `请输入至少${this.minLength}个字符`;
+};
+
+function NumberStrategy() {}
+
+NumberStrategy.prototype = Object.create(ValidationStrategy.prototype);
+NumberStrategy.prototype.validate = function (value) {
+  return /^\d+$/.test(value);
+};
+NumberStrategy.prototype.getErrorMessage = function () {
+  return "请输入纯数字";
+};
+
+// 验证器类
+function Validator(field, strategies) {
+  this.field = field;
+  this.strategies = strategies || [];
+}
+
+Validator.prototype.addStrategy = function (strategy) {
+  this.strategies.push(strategy);
+};
+
+Validator.prototype.validate = function () {
+  const value = document.getElementById(this.field).value;
+  let isValid = true;
+  let errorMessage = "";
+
+  for (let strategy of this.strategies) {
+    if (!strategy.validate(value)) {
+      isValid = false;
+      errorMessage = strategy.getErrorMessage();
+      break;
+    }
+  }
+
+  return { isValid, errorMessage };
+};
+
+// 使用示例
+const emailInput = document.getElementById("email");
+const emailValidator = new Validator("email", [new RequiredStrategy(), new MinLengthStrategy(6)]);
+emailValidator.addStrategy(new NumberStrategy());
+
+emailInput.addEventListener("blur", () => {
+  const validationResult = emailValidator.validate();
+  if (!validationResult.isValid) {
+    alert(validationResult.errorMessage);
+  }
+});
+
+```
+### 4代理模式
+```
+代理模式:不提供直接访问的渠道，提供一个中间层，通过中间层的代理访问目标对象。
+
+一 虚拟代理（也需要体现单一职责原则和开放封闭原则）
+1) 虚拟代理实现图片预加载
+
+//创建图片节并添加到页面进行显示，动态设置图片源。
+var getImg = (function() {
+  var imgNode = document.createElement('img');
+  document.body.appendChild(imgNode);
+  return function(src) {
+    imgNode.src = src;
+  }
+})();
+
+//预加载图片:虚拟代理
+var getImgProxy = (function() {
+  let image = new Image();
+  image.onload = function() {
+    getImg(this.src);
+  }
+  return function(src) {
+    getImg('占位图路径');
+    image.src = src;
+  }
+})();
+
+getImgProxy('http://img.xxx.com/1.jpg');
+
+二 缓存代理(无视参数顺序缓存)
+//求和
+var sum = function(){
+  let sum = 0;
+  for(let i = 0, l = arguments.length; i < l; i++) {
+    sum += arguments[i];
+  }
+  return sum
+}
+//求乘积
+var multiply = function(){
+  let multiply = 1;
+  for(let i = 0, l = arguments.length; i < l; i++) {
+    multiply *= arguments[i];
+  }
+  return multiply
+}
+
+var proxyFactory = function(fn) {
+  var cache = {};
+  return function() {
+   let args = Array.prototype.slice.call(arguments);//复制arugments
+   args.sort(function(a,b){
+    return a -b
+   });
+    let key = args.join(',');
+    if(cache[key]) {
+      return cache[key];
+    }
+    return cache[key] = fn.apply(this, arguments);
+  }
+  
+}
+
+let proxySum = proxyFactory(sum);
+proxySum(1, 2, 3);
+proxySum(1, 3, 2);
+
+```
+### 5迭代器模式
+```
+一 迭代器：提供遍历聚合对象的每一个元素的方法。
+
+1.1 内部迭代器:迭代的过程在迭代器内部完成。不需手动控制下一次迭代
+var each = function (obj, callback) {
+  for(let i = 0, l = obj.length; i < l; i++){
+    callback(obj[i], i, obj);
+  }
+}
+each([1,4,3,5],funciton(ky,item){
+  console.log(ky,item)
+})
+
+
+1.2 外部迭代器:必须手动地显式地请求进行下一次迭代。
+//提供了当前元素，下一个索引，是否已完成共三个标识。
+var iterator = function (obj) {
+    var current = 0;
+    var next = function () {
+      current +=1;
+    }
+    var isDone = function () {
+      return (current >= obj.length || obj.length === 0)
+    }
+  var getCurrent = function () {
+    return obj[current]
+  }
+  return {
+    next:next,
+    isDone:isDone,
+    getCurrent:getNext
+  }
+}
+//用来比较两个数组是否相同
+var compare = function (iterator1,iterator2) {
+  while(!iterator1.isDone() && !iterator2.isDone()){
+    if(iterator1.getCurrent() !== iterator2.getCurrent()){
+      return false;
+    }
+    iterator1.next();
+    iterator2.next();
+  }
+}
+var ai_one = iterator([1,2,3,4,5]);
+var ai_two = iterator([1,2,3,4,5]);
+compare(ai_one,ai_two)
+############################################
+
+3 js中常用的迭代方法
+
+3.1 数组迭代
+--------------------------
+# for
+let arr = [1,4,2]
+for(let i = 0, l = arr.length; i < l; i++){
+
+}
+--------------------------------------------
+# for..of
+#############################################
+let arr = [1,4,2]
+for(let item of arr){
+
+}
+-------------------------------------
+# forEach(callback)
+arr.forEach(function(item,index,arr){
+
+})
+高阶函数回调遍历，筛选查找
+###############################################
+# map(callback):取得每一个元素进行操作
+arr.map(function(item,index,arr){
+
+})
+---------------------------------------
+#find(callback): 找到一个满足条件的就停止
+arr.find(function(item,index,arr){
+
+})
+##############################################
+# filter(callback):找到所有满足条件的停止
+arr.filter(function(item,index,arr){
+
+})
+-----------------------------------------
+# reduce:做积累类操作（累加,累乘）
+arr.reduce(function(pre,cur,index,arr){
+
+})
+
+#################################################
+
+3.2 遍历对象
+#for..in:依次获得对象中的键名称，每次循环都返回对象的键名字符串
+for in (let key in obj) {
+  if(obj.hasOwnProperty(key)){
+    console.log(obj[key])
+  }
+}
+
+# Object.keys(obj):一次性获得对象中的所有键名，返回一个键名数组
+Object.keys(obj).forEach(function(key){
+  console.log(obj[key])
+})
+
+# Object.entries(obj):一次性获得对象中的所有键值对名称，返回一个键值对数组
+Object.entries(obj).forEach(function(key,item){
+
+}
+
+# Object.values(obj):一次性获得对象中的所有键值，返回一个键值的数组.
+Object.values(obj).forEach(function(item){
+  console.log(item)
+})
+----------------------------------------
+
+```
+### 6发布订阅模式(观察者模式)
+```
+一 观察者模式：定义了对象之间的一种一对多的依赖关系(对象和对象的依赖项).会在对象改变的时候递归地通知依赖项。
+
+二 使用场景: 时间上的解耦和对象之间的解耦
+2.1 应用于异步编程中，替代传递回调函数的方案。
+
+2.2 对象之间的相互通信。模块之间的相互通信
+
+
+三 js中的发布订阅
+3.1 自定义事件监听器
+  document.body.addEventListener('click',function(){
+    console.log('click')
+  })
+
+#############################################
+```
+### 7命令模式
+```
+所有设计模式的主题都遵循“固定不变的 + 动态调整”分离的原则。
+----------------------------
+一 命令模式：有时候需要向某些对象发送请求，但是并不知道请求的接收者是谁，也不知道被请
+求的操作是什么，此时希望用一种松耦合的方式来设计软件，使得请求发送者和请求接收者
+能够消除彼此之间的耦合关系。命令模式在 JavaScript 语言中是一种隐形的模式。
+#################################################
+```
+### 8组合模式
+```
+一 组合模式：组合模式可以让我们使用树形方式创建对象的结构，可以把相同的操作引用在组合对象和
+单个对象上，从而用一致的方式处理他们。
+
+二 组合模式的使用场景
+
+2.1 表示对象的部分整体结构。树形结构的对象，顶层对象提供的api叶子节点提供的api一致，只需要操作顶层
+对象的api就可以操作整个树。
+
+2.2 统一对待树形结构中的所有对象。
+###############################################
+```
+### 9模版方法模式
+```
+一 模版方法模式：基于继承的设计模式。由两部分组成，一个部分是抽象的父类，一个部分是实现子类。
+抽象父类封装的是整体实现的算法（不变的部分），实现子类实现的是具体的细节（动态变化的部分）。
+
+二 小结：模板方法模式是一种典型的通过封装变化提高系统扩展性的设计模式。在传统的面向对象语
+言中，一个运用了模板方法模式的程序中，子类的方法种类和执行顺序都是不变的，所以我们把
+这部分逻辑抽象到父类的模板方法里面。而子类的方法具体怎么实现则是可变的，于是我们把这
+部分变化的逻辑封装到子类中。通过增加新的子类，我们便能给系统增加新的功能，并不需要改
+动抽象父类以及其他子类。
 
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```
