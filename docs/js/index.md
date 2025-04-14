@@ -85,6 +85,9 @@ console.log(a)
 块级作用域 = 区块 {} + let 声明
 函数作用域或块级作用域的只在函数内部或区块内部可见。（作用域链）
 区块只有配合函数关键字function 或 let 形成了特有的作用域才能实现变量隔离。
+-------------------------------------------------------------
+热知识：get不到报RE错误，get的到，但是get到之后乱操作报TE错误。
+ReferenceError 同作用域判别失败相关，而 TypeError 则代表作用域判别成功了，但是对结果的操作是非法或不合理的。
  ```
 
  ### 条件语句
@@ -869,7 +872,7 @@ myIntervalId.clear();
  1.3.2 对象展开运算符: let targetObj = {...sourceObj}
 
 1.4 常见的深拷贝方式
-```
+
  1.4.1 let targetObj = JSON.parse(JSON.Stringify(sourceObj)) ;
  这种拷贝方式，局限性较大,会忽略sourceObj对象中属性值是undefined,Symbol,函数类型的属性拷贝,存在循环
  引用时还会报错。
@@ -1024,7 +1027,7 @@ module.exports = {
     clone
 };
  ----------------end-----------------------
-```
+
 1.4.3 lodash等第三方库的深拷贝。
 
 ```
@@ -1283,7 +1286,7 @@ debounce 结合业务版（先执行一次，然后在n内不再触发，n秒后
 function debounce(event,timeGap,flag){
   let timer = null;
   return function(...args){
-    clearTimeour(timer);
+    clearTimeout(timer);
     if(flag && !timer){
       event.apply(this,args);
     }
@@ -1300,12 +1303,17 @@ function debounce(event,timeGap,flag){
 ### this绑定
 ```
 总体来说,this有五种类型的绑定。
-1）默认绑定
-2）隐式绑定
-3）显式绑定
-4）new 绑定
+1）默认绑定：
+当一个函数没有作为某个对象的方法被调用，也没有使用有cba调用，也不是new调用，
+那么this会指向宿主环境中的全局对象。
+2）隐式绑定：
+当函数作为对象的属性被调用时。
+3）显式绑定：
+ 使用cba调用函数，并指定this为调用参数。
+4）new 绑定：
+new 构造函数调用，this指向构造函数的实例。
 5）箭头函数绑定
-
+  
 小结：this指向问题，谁调用指向谁。
 
 一 默认绑定
