@@ -10,4 +10,5 @@
 * [Vue2 + Vue3](frame/index)
 * [Other](other/index)
 * [Interview](interview/index)
+* [PMP](pmp/index)
 * [参考](reference/index)
